@@ -1,0 +1,227 @@
+#!/usr/bin/env perl
+
+=head1 NAME
+
+tb - Toolbox helper script for Fedora Silverblue
+
+=head1 SYNOPSIS
+
+    tb [OPTIONS]... NUMBER COMMAND
+
+    -r, --run      run command inside toolbox
+    -l, --list     list installed toolboxes
+    -v, --verbose  use verbose mode
+    -d, --debug    use debug mode (for development)
+    --version      print version information
+    -?, --help     print this help message
+
+Where I<NUMBER> is the number assigned to the toolbox you wish to enter, and I<COMMAND> is the command you wish to run inside the toolbox (if the --run switch is specified).
+
+Examples:
+
+    tb 1                     # enter toolbox 1
+    tb --run 2 /usr/bin/vim  # run '/usr/bin/vim' inside toolbox 2
+    tb -r -- 3 nano -w %F    # run 'nano -w %F' inside toolbox 3
+    tb -l                    # prints contents of ~/.tb-perl file
+
+Note the use of '--' when passing arguments of the form '-a' or '--arg'. This tells tb to stop parsing further switches, and instead send them through to the toolbox as launch arguments.
+
+Numbers are assigned to toolboxes via the tb-perl config file searched for in $XDG_CONFIG_HOME, falling back to ~/.config. Per line syntax is as follows:
+
+    <toolbox name> <hostname>
+
+Parts of each line are separated by spaces, with a newline for the next entry. Line number determines toolbox number. If a hostname is unspecified, it will default to the toolbox name. An example of a .tb-perl file:
+
+    perl-dev perl-x550cc  # perl-dev is toolbox 1, hostname perl-x550cc
+    java-dev java-x550cc  # java-dev is toolbox 2, hostname java-x550cc
+    python-dev            # python-dev is toolbox 3, hostname python-dev
+
+In this way, environment variables in your .bashrc can be set either machine wide (usin a regexp to match 'x550cc', in this case) or toolbox specific ('java', 'python', etc), and your toolboxes will still set your machine vars.
+
+=head1 DESCRIPTION
+
+This program was primarily designed to wrap around Silverblue's toolbox utility and allow hostnames other than "toolbox". Additionally, numbers are  assigned to toolboxes to make command line use faster and more convenient.
+
+To work around L<this bug|https://github.com/containers/toolbox/issues/586>, set the hostname of the application's toolbox to your system hostname. Windows will now group correctly when apps are pinned to the GNOME Shell favourites
+
+=head1 AUTHOR
+
+Michael Suzzi, 2021
+
+=cut
+
+# 5.10.0 required for say
+# 5.11.3 required for link text in Pod
+use 5.11.3;
+
+use strict;
+use warnings;
+
+use Data::Dumper qw(Dumper);
+use Getopt::Long qw(:config auto_version auto_help);
+use Pod::Usage;
+
+our $VERSION = '0.0.1';
+
+# Main subroutine
+sub main (@) {
+    my ($run, $list, $verb, $dbg, $tb, $cmd, $args) = @_;
+
+    # Locate config file
+    my $dot;
+    if (defined $ENV{"XDG_CONFIG_HOME"}) {
+	$dot = $ENV{"XDG_CONFIG_HOME"} . "/tb-perl";
+    } else {
+	$dot = $ENV{"HOME"} . "/.config/tb-perl";
+    }
+    
+    $dbg && print Dumper \@_;
+
+    my @config = load_dotfile($dot);
+    $verb && say("Successfully loaded " . @config .
+		 " config file entries.");
+    $dbg && print Dumper \@config;
+
+    if ($list) {
+	say "#  " . "Toolbox             " . "Hostname            ";
+	
+	# Format cannot be indented
+	my $line = 1;
+	my $key;
+	format LIST =
+@< @<<<<<<<<<<<<<<<<<< @<<<<<<<<<<<<<<<<<<
+$line, $key, $config[$line-1]{$key}
+.
+	select STDOUT;
+	$~ = "LIST";
+	
+	# Write format to STDOUT
+	for (my $length = @config; $line != $length; $line++) {
+	    $key = (keys %{ $config[$line-1]})[0];
+	    $dbg && say "Current working key: $key";
+	    write;
+	}
+	exit 0;
+	
+    } elsif ($run || $tb) {
+	my $tb_to_enter = (keys %{ $config[$tb-1] })[0];
+	my $host = $config[$tb-1]{$tb_to_enter};
+	
+	$verb && say "Setting \"$tb_to_enter\" hostname to \"$host\"...";
+	system("toolbox", "run", "-c", $tb_to_enter, "sudo", "hostname",
+	       "$host")
+	  and error_die("fail_enter", $tb_to_enter);
+	$verb && say "Success!";
+	
+        if ($run) {
+	    if (scalar @$args && $verb) {
+		say "Running \"$cmd @$args\" in toolbox $tb_to_enter...";
+	    } elsif ($verb) {
+		say "Running \"$cmd\" in toolbox $tb_to_enter...";
+	    }
+	    system("toolbox", "run", "-c", $tb_to_enter, $cmd, @$args)
+	      and error_die("fail_run", $tb_to_enter, $cmd);
+	} else {
+	    $verb && say "Entering toolbox $tb_to_enter...";
+	system("toolbox", "enter", $tb_to_enter)
+	  and error_die("fail_enter", $tb_to_enter);
+	}
+	exit 0;
+	
+    } else {
+	error_die("invalid_syntax");
+    }
+}
+
+# Prints error and dies, with error code determined by hash position.
+sub error_die {;
+    my %error_msg = (
+	"insuf_args" => "Insufficient arguments!",
+	"too_many_args" => "Too many arguments!",
+        "missing_tb" => "Missing toolbox parameter!",
+	"cmd_no_run" => "Missing -run switch!",
+        "list_with_tb" => "List mode used with toolbox argument!",
+        "list_with_run" => "List mode used with -run switch!",
+        "dot_not_exist"  => "Config file does not exist!",
+        "dot_not_readable" => "Config file is not readable!",
+        "invalid_conf" => "Config file is incorrectly formatted!",
+	"invalid_syntax" => "Invalid syntax!",
+        "fail_enter" => "Failed to enter toolbox $_[1]!",
+        "fail_run" => "Failed to run command $_[2] in toolbox $_[1]!",
+		    );
+    my $err_code;
+    foreach (keys %error_msg) {
+	$err_code++;
+	last if defined $error_msg{$_[0]};
+    }
+    say "ERROR: " . $error_msg{$_[0]} and exit $err_code;
+}
+
+# Handles dotfile loading. Returns a hash of "toolbox name" => "hostname".
+sub load_dotfile ($) {
+    my $file = $_[0];
+    if (-e $file) {
+	if (-r $file) {
+	    open DOT, "<$file";
+	} else {
+	    error_die("dot_not_readable");
+	}
+    } else {
+	error_die("dot_not_exist");
+    }
+    my @order;
+    while (<DOT>) {
+	my ($name, $host) = split /\s+/;
+	chomp $name if defined $name;
+	chomp $host if defined $host;
+	if (!defined $name && !defined $host) {
+	    error_die("invalid_conf");
+	} elsif (!defined $host) {
+	    $host = $name;  # Default to toolbox name
+	}
+	push @order, { $name => $host };
+    }
+    close DOT;
+    return @order;
+}
+
+# This code block handles arguments and input validation.
+{
+    if (!defined $ARGV[0]) {
+        error_die("insuf_args");
+    }
+    my ($run, $list, $verb, $dbg, $tb) = (0) x 5;
+    my $cmd;
+    my @args;
+    GetOptions('run'     => \$run,
+	       'list'    => \$list,
+	       'verbose' => \$verb,
+               'debug'   => \$dbg);
+
+    $verb = 1 if $dbg;
+
+    unless ($list) {
+        $tb = shift;           # Toolbox to enter
+	$cmd = shift if $run;  # Command to run
+
+	error_die("missing_tb")
+	  unless $tb;
+
+	# Catch some edge cases
+	if (!$run) {
+	    if (($cmd or @ARGV) && $tb) {
+		error_die("cmd_no_run");
+	    } elsif (length $tb gt 1) {
+		error_die("cmd_no_run");
+	    }
+	}
+    } else {
+	if ($tb) {
+	    error_die("list_with_tb") if $tb;
+	} elsif ($run) {
+	    error_die("list_with_run") if $run;
+	}
+    }
+    exit(main($run, $list, $verb, $dbg, $tb, $cmd, \@ARGV));
+}
+

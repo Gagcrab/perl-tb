@@ -152,7 +152,14 @@ $line, $key, $config[$line-1]{$key}
 }
 
 # Prints error and dies, with error code determined by hash position.
-sub error_die {;
+sub error_die {
+    my $tb = "TB";
+    my $cmd = "CMD";
+    $tb = $_[1] if defined $_[1];
+    $cmd = $_[2] if defined $_[2];
+
+    die unless defined $_[0];
+	      
     my %error_msg = (
 	"insuf_args" => "Insufficient arguments!",
 	"too_many_args" => "Too many arguments!",
@@ -164,8 +171,8 @@ sub error_die {;
         "dot_not_readable" => "Config file is not readable!",
         "invalid_conf" => "Config file is incorrectly formatted!",
 	"invalid_syntax" => "Invalid syntax!",
-        "fail_enter" => "Failed to enter toolbox $_[1]!",
-        "fail_run" => "Failed to run command $_[2] in toolbox $_[1]!",
+        "fail_enter" => "Failed to enter toolbox $tb",
+        "fail_run" => "Failed to run command $cmd in toolbox $tb!",
 		    );
     my $err_code;
     foreach (keys %error_msg) {

@@ -4,27 +4,39 @@
 
 tb - Toolbox helper script for Fedora Silverblue
 
+=head1 VERSION
+
+version 0.9.0
+
 =head1 SYNOPSIS
 
-    tb [OPTIONS]... NUMBER COMMAND
+    tb [OPTIONS]... NUMBER COMMAND ARGUMENTS
 
-    -r, --run      run command inside toolbox
-    -l, --list     list installed toolboxes
-    -v, --verbose  use verbose mode
-    -d, --debug    use debug mode (for development)
-    --version      print version information
-    -?, --help     print this help message
+    -r, --run                # run command inside toolbox
+    -l, --list               # list installed toolboxes
+    -v, --verbose            # use verbose mode
+    -d, --debug              # use debug mode (for development)
+    --version                # print version information
+    -?, --help               # print this help message
 
-Where I<NUMBER> is the number assigned to the toolbox you wish to enter, and I<COMMAND> is the command you wish to run inside the toolbox (if the --run switch is specified).
+Where I<NUMBER> is the number assigned to the toolbox you wish to enter, and I<COMMAND> is the command you wish to run inside the toolbox, followed by any arguments (requires --run switch to be specified).
 
 Examples:
 
     tb 1                     # enter toolbox 1
     tb --run 2 /usr/bin/vim  # run '/usr/bin/vim' inside toolbox 2
-    tb -r -- 3 nano -w %F    # run 'nano -w %F' inside toolbox 3
     tb -l                    # prints contents of ~/.tb-perl file
+    tb -r -- 3 nano -w %F    # run 'nano -w %F' inside toolbox 3
 
-Note the use of '--' when passing arguments of the form '-a' or '--arg'. This tells tb to stop parsing further switches, and instead send them through to the toolbox as launch arguments.
+Note the double dashes in the final example, which tell tb to stop searching for options and to pass through '-w' as an argument to 'nano'. These are only required if any of the arguments following the command to run begin with dashes.
+
+=head1 DESCRIPTION
+
+This program was primarily designed to wrap Silverblue's toolbox utility and allow hostnames other than "toolbox". Additionally, the assignment of numbers to toolboxes makes command line usage faster and more convenient.
+
+To work around L<this bug|https://github.com/containers/toolbox/issues/586>, set the hostname of the application's toolbox to your system hostname. Windows will now group correctly when apps are pinned in GNOME shell.
+
+=head2 CONFIGURATION
 
 Numbers are assigned to toolboxes via the tb-perl config file searched for in $XDG_CONFIG_HOME, falling back to ~/.config. Per line syntax is as follows:
 
@@ -38,15 +50,21 @@ Parts of each line are separated by spaces, with a newline for the next entry. L
 
 In this way, environment variables in your .bashrc can be set either machine wide (usin a regexp to match 'x550cc', in this case) or toolbox specific ('java', 'python', etc), and your toolboxes will still set your machine vars.
 
-=head1 DESCRIPTION
+=head1 AUTHORS
 
-This program was primarily designed to wrap around Silverblue's toolbox utility and allow hostnames other than "toolbox". Additionally, numbers are  assigned to toolboxes to make command line use faster and more convenient.
+=over 4
 
-To work around L<this bug|https://github.com/containers/toolbox/issues/586>, set the hostname of the application's toolbox to your system hostname. Windows will now group correctly when apps are pinned to the GNOME Shell favourites
+=item *
 
-=head1 AUTHOR
+Michael Suzzi <msuz.code@gmail.com>
 
-Michael Suzzi, 2021
+=back
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2021 by Michael Suzzi.
+
+This is free software; you can redistribute it and/or modify it under the same terms as the Perl 5 programming language system itself.
 
 =cut
 

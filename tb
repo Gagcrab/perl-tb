@@ -161,18 +161,19 @@ sub error_die {
     die unless defined $_[0];
 	      
     my %error_msg = (
-	"insuf_args" => "Insufficient arguments!",
-	"too_many_args" => "Too many arguments!",
-        "missing_tb" => "Missing toolbox parameter!",
-	"cmd_no_run" => "Missing --run switch!",
-        "list_with_tb" => "List mode used with toolbox argument!",
-        "list_with_run" => "List mode used with --run switch!",
-        "dot_not_exist"  => "Config file does not exist!",
-        "dot_not_readable" => "Config file is not readable!",
-        "invalid_conf" => "Config file is incorrectly formatted!",
-	"invalid_syntax" => "Invalid syntax!",
+	"insuf_args" => "Insufficient arguments",
+	"too_many_args" => "Too many arguments",
+        "missing_tb" => "Missing toolbox parameter",
+	"cmd_no_run" => "Missing --run switch",
+        "list_with_tb" => "List mode used with toolbox argument",
+        "list_with_run" => "List mode used with --run switch",
+        "dot_not_exist"  => "Config file does not exist",
+	"dot_not_readable" => "Config file is not readable",
+	"dot_open_fail" => "Failed to open filehandle on config file",
+        "invalid_conf" => "Config file is incorrectly formatted",
+	"invalid_syntax" => "Invalid syntax",
         "fail_enter" => "Failed to enter toolbox $tb",
-        "fail_run" => "Failed to run command $cmd in toolbox $tb!",
+        "fail_run" => "Failed to run command $cmd in toolbox $tb",
 		    );
     my $err_code;
     foreach (keys %error_msg) {
@@ -187,7 +188,8 @@ sub load_dotfile ($) {
     my $file = $_[0];
     if (-e $file) {
 	if (-r $file) {
-	    open DOT, "<$file";
+	    open DOT, "<$file" or
+	      error_die("dot_open_fail");
 	} else {
 	    error_die("dot_not_readable");
 	}

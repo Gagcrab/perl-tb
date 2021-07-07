@@ -132,22 +132,24 @@ $line, $key, $config[$line-1]{$key}
 	       "$host")
 	  and error_die("fail_enter", $tb_to_enter);
 	$verb && say "Success!";
-	
+
+	my @runlist = ("toolbox");
+	($verb || $dbg) &&
+	  push @runlist, "--verbose";
         if ($run) {
+	    push @runlist, "run", "-c", $tb_to_enter, $cmd;
 	    if (scalar @$args) {  # Check that @args has elements
+		push @runlist, @$args;
 		$verb && say "Running \"$cmd @$args\" in toolbox $tb_to_enter...";
-		system("toolbox", "run", "-c", $tb_to_enter, $cmd, @$args)
-		  and error_die("fail_run", $tb_to_enter, $cmd);
 	    } else {
 		$verb && say "Running \"$cmd\" in toolbox $tb_to_enter...";
-		system("toolbox", "run", "-c", $tb_to_enter, $cmd)
-		  and error_die("fail_run", $tb_to_enter, $cmd);
 	    }
 	} else {
+	    push @runlist, "enter", $tb_to_enter;
 	    $verb && say "Entering toolbox $tb_to_enter...";
-	    system("toolbox", "enter", $tb_to_enter)
-	      and error_die("fail_enter", $tb_to_enter);
 	}
+	system(@runlist) and $run ? error_die("fail_run", $tb_to_enter, $cmd)
+	                          : error_die("fail_enter", $tb_to_enter);
 	exit 0;
 	
     } else {

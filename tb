@@ -100,6 +100,7 @@ sub main (@) {
 		 " config file entries.");
     $dbg && print Dumper \@config;
 
+    # If in list mode
     if ($list) {
 	say "#  " . "Toolbox             " . "Hostname            ";
 	
@@ -121,6 +122,7 @@ $line, $key, $config[$line-1]{$key}
 	}
 	exit 0;
 	
+    # If in run or toolbox enter mode
     } elsif ($run || $tb) {
 	my $tb_to_enter = (keys %{ $config[$tb-1] })[0];
 	my $host = $config[$tb-1]{$tb_to_enter};
@@ -132,17 +134,19 @@ $line, $key, $config[$line-1]{$key}
 	$verb && say "Success!";
 	
         if ($run) {
-	    if (scalar @$args && $verb) {
-		say "Running \"$cmd @$args\" in toolbox $tb_to_enter...";
-	    } elsif ($verb) {
-		say "Running \"$cmd\" in toolbox $tb_to_enter...";
+	    if (scalar @$args) {  # Check that @args has elements
+		$verb && say "Running \"$cmd @$args\" in toolbox $tb_to_enter...";
+		system("toolbox", "run", "-c", $tb_to_enter, $cmd, @$args)
+		  and error_die("fail_run", $tb_to_enter, $cmd);
+	    } else {
+		$verb && say "Running \"$cmd\" in toolbox $tb_to_enter...";
+		system("toolbox", "run", "-c", $tb_to_enter, $cmd)
+		  and error_die("fail_run", $tb_to_enter, $cmd);
 	    }
-	    system("toolbox", "run", "-c", $tb_to_enter, $cmd, @$args)
-	      and error_die("fail_run", $tb_to_enter, $cmd);
 	} else {
 	    $verb && say "Entering toolbox $tb_to_enter...";
-	system("toolbox", "enter", $tb_to_enter)
-	  and error_die("fail_enter", $tb_to_enter);
+	    system("toolbox", "enter", $tb_to_enter)
+	      and error_die("fail_enter", $tb_to_enter);
 	}
 	exit 0;
 	

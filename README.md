@@ -4,7 +4,7 @@ tb - Toolbox helper script for Fedora Silverblue
 
 # VERSION
 
-version 0.9.0
+version 0.9.1
 
 # SYNOPSIS
 
@@ -12,6 +12,7 @@ version 0.9.0
 
     -r, --run                # run command inside toolbox
     -l, --list               # list installed toolboxes
+    -f, --force              # force changing of hostname when toolbox is already running
     -v, --verbose            # use verbose mode
     -d, --debug              # use debug mode (for development)
     --version                # print version information
@@ -26,13 +27,13 @@ Examples:
     tb -l                    # prints contents of ~/.tb-perl file
     tb -r -- 3 nano -w %F    # run 'nano -w %F' inside toolbox 3
 
-Note the double dashes in the final example, which tell tb to stop searching for options and to pass through '-w' as an argument to 'nano'.
+Note the double dashes in the final example, which tell tb to stop searching for options and to pass through '-w' as an argument to 'nano'. These are only required if any of the arguments following the command to run begin with dashes.
 
 # DESCRIPTION
 
 This program was primarily designed to wrap Silverblue's toolbox utility and allow hostnames other than "toolbox". Additionally, the assignment of numbers to toolboxes makes command line usage faster and more convenient.
 
-To work around [this bug](https://github.com/containers/toolbox/issues/586), set the hostname of the application's toolbox to your system hostname. Windows will now group correctly when apps are pinned to the GNOME Shell favourites.
+To work around [this bug](https://github.com/containers/toolbox/issues/586), set the hostname of the application's toolbox to your system hostname. Windows will now group correctly when apps are pinned in GNOME shell.
 
 ## CONFIGURATION
 

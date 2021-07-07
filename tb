@@ -6,7 +6,7 @@ tb - Toolbox helper script for Fedora Silverblue
 
 =head1 VERSION
 
-version 0.9.0
+version 0.9.1
 
 =head1 SYNOPSIS
 
@@ -14,6 +14,7 @@ version 0.9.0
 
     -r, --run                # run command inside toolbox
     -l, --list               # list installed toolboxes
+    -f, --force              # force changing of hostname when toolbox is already running
     -v, --verbose            # use verbose mode
     -d, --debug              # use debug mode (for development)
     --version                # print version information
@@ -79,11 +80,12 @@ use Data::Dumper qw(Dumper);
 use Getopt::Long qw(:config auto_version auto_help);
 use Pod::Usage;
 
-our $VERSION = '0.0.1';
+# Odd version numbers are unstable
+our $VERSION = '0.9.1';
 
 # Main subroutine
 sub main (@) {
-    my ($run, $list, $verb, $dbg, $tb, $cmd, $args) = @_;
+    my ($run, $list, $verb, $dbg, $force, $tb, $cmd, $args) = @_;
 
     # Locate config file
     my $dot;
@@ -126,16 +128,20 @@ $line, $key, $config[$line-1]{$key}
     } elsif ($run || $tb) {
 	my $tb_to_enter = (keys %{ $config[$tb-1] })[0];
 	my $host = $config[$tb-1]{$tb_to_enter};
-	
-	$verb && say "Setting \"$tb_to_enter\" hostname to \"$host\"...";
-	system("toolbox", "run", "-c", $tb_to_enter, "sudo", "hostname",
-	       "$host")
-	  and error_die("fail_enter", $tb_to_enter);
-	$verb && say "Success!";
+
+	if (!$force && tb_running($tb_to_enter)) {
+	    $verb && say "Toolbox \"$tb_to_enter\" already running; not setting",
+                         " hostname. Use --force switch to override";
+	} else {
+	    $verb && say "Setting \"$tb_to_enter\" hostname to \"$host\"...";
+	    system("toolbox", "run", "-c", $tb_to_enter, "sudo", "hostname",
+		   "$host")
+	      and error_die("fail_enter", $tb_to_enter);
+	    $verb && say "Success!";
+	}
 
 	my @runlist = ("toolbox");
-	($verb || $dbg) &&
-	  push @runlist, "--verbose";
+	$verb && push @runlist, "--verbose";
         if ($run) {
 	    push @runlist, "run", "-c", $tb_to_enter, $cmd;
 	    if (scalar @$args) {  # Check that @args has elements
@@ -157,14 +163,32 @@ $line, $key, $config[$line-1]{$key}
     }
 }
 
+# Checks the output of "podman containers list" to see if a toolbox is running.
+# Return true if running, false if not running
+sub tb_running ($) {
+    die unless defined $_[0];
+    my $tb = $_[0];
+    # Lists only running toolboxes
+    my $output = `podman container list`
+      or error_die("podman_fail");
+    # Search for toolbox name at the end of a line
+    if ($output =~ /\s\s${tb}$/m) {
+	return 1;
+    } else {
+	return 0;
+    }
+}
+
 # Prints error and dies, with error code determined by hash position.
 sub error_die {
+    die unless defined $_[0];
+    # Optional additional arguments
     my $tb = "TB";
     my $cmd = "CMD";
     $tb = $_[1] if defined $_[1];
     $cmd = $_[2] if defined $_[2];
 
-    die unless defined $_[0];
+    
 	      
     my %error_msg = (
 	"insuf_args" => "Insufficient arguments",
@@ -178,6 +202,7 @@ sub error_die {
 	"dot_open_fail" => "Failed to open filehandle on config file",
         "invalid_conf" => "Config file is incorrectly formatted",
 	"invalid_syntax" => "Invalid syntax",
+	"podman_fail" => "Failed to run podman",
         "fail_enter" => "Failed to enter toolbox $tb",
         "fail_run" => "Failed to run command $cmd in toolbox $tb",
 		    );
@@ -223,13 +248,14 @@ sub load_dotfile ($) {
     if (!defined $ARGV[0]) {
         error_die("insuf_args");
     }
-    my ($run, $list, $verb, $dbg, $tb) = (0) x 5;
+    my ($run, $list, $verb, $dbg, $force, $tb) = (0) x 6;  # Init to 0
     my $cmd;
     my @args;
     GetOptions('run'     => \$run,
 	       'list'    => \$list,
 	       'verbose' => \$verb,
-               'debug'   => \$dbg);
+               'debug'   => \$dbg,
+	       'force'   => \$force);
 
     $verb = 1 if $dbg;
 
@@ -255,6 +281,6 @@ sub load_dotfile ($) {
 	    error_die("list_with_run") if $run;
 	}
     }
-    exit(main($run, $list, $verb, $dbg, $tb, $cmd, \@ARGV));
+    exit(main($run, $list, $verb, $dbg, $force, $tb, $cmd, \@ARGV));
 }
 

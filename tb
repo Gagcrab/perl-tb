@@ -195,6 +195,7 @@ sub error_die {
 	"too_many_args" => "Too many arguments",
         "missing_tb" => "Missing toolbox parameter",
 	"cmd_no_run" => "Missing --run switch",
+	"run_no_cmd" => "No command specified to run",
         "list_with_tb" => "List mode used with toolbox argument",
         "list_with_run" => "List mode used with --run switch",
         "dot_not_exist"  => "Config file does not exist",
@@ -267,14 +268,16 @@ sub load_dotfile ($) {
 	  unless $tb;
 
 	# Catch some edge cases
-	if (!$run) {
+	if ($run) {
+	    if (!$cmd) {
+		error_die("run_no_cmd");
+	    }
+	} else {
 	    if (($cmd or @ARGV) && $tb) {
-		error_die("cmd_no_run");
-	    } elsif (length $tb gt 1) {
 		error_die("cmd_no_run");
 	    }
 	}
-    } else {
+    } else {  # We're in list mode
 	if ($tb) {
 	    error_die("list_with_tb") if $tb;
 	} elsif ($run) {

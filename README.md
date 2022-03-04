@@ -37,6 +37,8 @@ To work around [this bug](https://github.com/containers/toolbox/issues/586), set
 
 ## CONFIGURATION
 
+**NOTE:** For now, you will have to manually create and populate the config file yourself. Expect this to change soon in future releases.
+
 Numbers are assigned to toolboxes via the tb-perl config file searched for in $XDG\_CONFIG\_HOME, falling back to ~/.config. Per line syntax is as follows:
 
     <toolbox name> <hostname>
@@ -47,7 +49,7 @@ Parts of each line are separated by spaces, with a newline for the next entry. L
     java-dev java-x550cc  # java-dev is toolbox 2, hostname java-x550cc
     python-dev            # python-dev is toolbox 3, hostname python-dev
 
-In this way, environment variables in your .bashrc can be set either machine wide (usin a regexp to match 'x550cc', in this case) or toolbox specific ('java', 'python', etc), and your toolboxes will still set your machine vars.
+In this way, environment variables in your .bashrc can be set either machine wide (using a regexp to match a common string segment) or toolbox specific ('java', 'python', 'perl').
 
 # AUTHORS
 
